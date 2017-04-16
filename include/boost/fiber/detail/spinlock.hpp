@@ -13,11 +13,15 @@
 
 #if !defined(BOOST_FIBERS_NO_ATOMICS) 
 # include <mutex>
-# include <boost/fiber/detail/spinlock_ttas.hpp>
 # include <boost/fiber/detail/spinlock_ttas_adaptive.hpp>
+# include <boost/fiber/detail/spinlock_ttas.hpp>
 # if defined(BOOST_FIBERS_HAS_FUTEX)
-#  include <boost/fiber/detail/spinlock_ttas_futex.hpp>
 #  include <boost/fiber/detail/spinlock_ttas_adaptive_futex.hpp>
+#  include <boost/fiber/detail/spinlock_ttas_futex.hpp>
+# endif
+# if defined(BOOST_USE_TSX)
+#  include <boost/fiber/detail/spinlock_ttas_rtm.hpp>
+#  include <boost/fiber/detail/spinlock_ttas_adaptive_rtm.hpp>
 # endif
 #endif
 
@@ -29,7 +33,7 @@ namespace boost {
 namespace fibers {
 namespace detail {
 
-#if defined(BOOST_FIBERS_NO_ATOMICS) 
+#if defined(BOOST_FIBERS_NO_ATOMICS)
 struct spinlock {
     constexpr spinlock() noexcept {}
     void lock() noexcept {}
@@ -42,14 +46,24 @@ struct spinlock_lock {
     void unlock() noexcept {}
 };
 #else
-# if defined(BOOST_FIBERS_SPINLOCK_STD_MUTEX) 
+# if defined(BOOST_FIBERS_SPINLOCK_STD_MUTEX)
 using spinlock = std::mutex;
 # elif defined(BOOST_FIBERS_SPINLOCK_TTAS_FUTEX)
 using spinlock = spinlock_ttas_futex;
 # elif defined(BOOST_FIBERS_SPINLOCK_TTAS_ADAPTIVE_FUTEX)
 using spinlock = spinlock_ttas_adaptive_futex;
-# elif defined(BOOST_FIBERS_SPINLOCK_TTAS_ADAPTIVE) 
+# elif defined(BOOST_FIBERS_SPINLOCK_TTAS_ADAPTIVE)
 using spinlock = spinlock_ttas_adaptive;
+# elif defined(BOOST_FIBERS_SPINLOCK_TTAS_RTM)
+#  if ! defined(BOOST_USE_TSX)
+#   error "TSX not enabled, use tsx=on"
+#  endif
+using spinlock = spinlock_ttas_rtm;
+# elif defined(BOOST_FIBERS_SPINLOCK_TTAS_ADAPTIVE_RTM)
+#  if ! defined(BOOST_USE_TSX)
+#   error "TSX not enabled, use tsx=on"
+#  endif
+using spinlock = spinlock_ttas_adaptive_rtm;
 # else
 using spinlock = spinlock_ttas;
 # endif
